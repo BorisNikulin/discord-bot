@@ -1,0 +1,36 @@
+name:                discord-bot
+version:             0.1.0.0
+github:              "BorisNikulin/discord-bot"
+license:             BSD3
+author:              "Boris Nikulin"
+maintainer:          "NikulinBE@gmail.com"
+copyright:           "2019 Boris Nikulin"
+
+extra-source-files:
+    - README.md
+    - secrets/*
+
+description: Please see the README on GitHub at <https://github.com/BorisNikulin/simple#readme>
+
+dependencies:
+    - base >= 4.7 && < 5
+    - discord-haskell
+
+library:
+    source-dirs: src
+
+executables:
+    discord-bot-exe:
+        main:                Main.hs
+        source-dirs:         app
+        ghc-options:
+            - -threaded
+            - -rtsopts
+            - -with-rtsopts=-N
+            - -Wall
+            - -Wcompat
+            - -Wincomplete-record-updates
+            - -Wincomplete-uni-patterns
+            - -Wredundant-constraints
+        dependencies:
+            - discord-bot

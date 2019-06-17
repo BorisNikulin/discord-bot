@@ -1,0 +1,7 @@
+resolver: lts-13.25
+
+packages:
+    - .
+
+extra-deps:
+    - discord-haskell-0.8.3

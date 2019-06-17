@@ -1,0 +1,5 @@
+secrets/
+
+.stack-work/
+discord-bot.cabal
+*~
