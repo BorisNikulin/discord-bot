@@ -15,6 +15,10 @@ description: Please see the README on GitHub at <https://github.com/BorisNikulin
 dependencies:
     - base >= 4.7 && < 5
     - discord-haskell
+    - text >= 1.2.3 && < 1.2.4
+
+default-extensions:
+    - OverloadedStrings
 
 library:
     source-dirs: src
@@ -32,5 +36,6 @@ executables:
             - -Wincomplete-record-updates
             - -Wincomplete-uni-patterns
             - -Wredundant-constraints
+            - -fno-warn-tabs
         dependencies:
             - discord-bot
