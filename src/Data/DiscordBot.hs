@@ -2,55 +2,47 @@
 
 module Data.DiscordBot where
 
-import Data.Char
-import qualified Data.Text as T
 import Data.Aeson
+import qualified Data.Text as T
 import Polysemy
 import Polysemy.Input
 import Polysemy.Output
 import Polysemy.Reader
 import Discord
 
+import Data.Command
+import Text.CommandParser
+
 data SomeRequest where
 	SomeRequest :: (FromJSON a, Request (r a)) => r a -> SomeRequest
 
 type DiscordConnection = (RestChan, Gateway, [ThreadIdType])
 
-data Command
-	= PingPong ChannelId
-	| Stop
-	| None
-
 data DiscordBot m a where
 	GetCommand :: DiscordBot m Command
-	Pong :: ChannelId -> DiscordBot m ()
+	SendMessage :: ChannelId -> T.Text -> DiscordBot m ()
 
 makeSem ''DiscordBot
 
 reinterpretDiscordBot :: Sem (DiscordBot ': r) a -> Sem (Input Command ': Output SomeRequest ': r) a
 reinterpretDiscordBot = reinterpret2 \case
 	GetCommand -> input @Command
-	Pong channel -> output . SomeRequest $ CreateMessage channel "pong"
+	SendMessage channel txt -> output . SomeRequest $ CreateMessage channel txt
 
 reinterpretCommandInput :: Sem (Input Command ': r) a -> Sem (Input Event ': r) a
 reinterpretCommandInput = reinterpret \case
 	Input -> input >>= \case
 		MessageCreate m
-			| not $ fromBot m -> return case messageText m of
-				txt
-					| isPing txt -> PingPong $ messageChannel m
-					| isStop txt -> Stop
-					| otherwise  -> None
+			| not $ fromBot m -> return $ case parseCommand $ messageText m of
+				InvalidCommand _ (Just e) -> InvalidCommand (messageChannel m) e
+				InvalidCommand _ Nothing  -> InvalidCommand (messageChannel m) "invalid command"
+				PingPong _                -> PingPong $ messageChannel m
+				Stop                      -> Stop
+				None                      -> None
 		_ -> return None
 
 fromBot :: Message -> Bool
 fromBot m = userIsBot (messageAuthor m)
-
-isPing :: T.Text -> Bool
-isPing = T.isPrefixOf "ping" . T.map toLower
-
-isStop :: T.Text -> Bool
-isStop = T.isPrefixOf "stop" . T.map toLower
 
 interpretEventInput :: Members '[Reader DiscordConnection, Lift IO] r => Sem (Input Event ': r) a -> Sem r a
 interpretEventInput = interpret \case

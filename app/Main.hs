@@ -7,6 +7,7 @@ import Polysemy.Reader
 import Discord
 
 import Data.DiscordBot
+import Data.Command
 
 main :: IO ()
 main = do
@@ -18,12 +19,13 @@ main = do
 		. interpretEventInput
 		. reinterpretCommandInput
 		$ reinterpretDiscordBot pingPong
-	
+
 	stopDiscord dis
 
 pingPong :: Member DiscordBot r => Sem r ()
 pingPong = getCommand >>= \case
-	PingPong channel -> pong channel >> pingPong
+	InvalidCommand channel e -> sendMessage channel (T.pack e) >> pingPong
+	PingPong channel -> sendMessage channel "pong!" >> pingPong
 	None -> pingPong
 	Stop -> return ()
 
