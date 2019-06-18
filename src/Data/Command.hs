@@ -1,6 +1,7 @@
 module Data.Command where
 
 import Data.Functor.Identity
+import Data.Text (Text)
 import Discord
 
 type family HKD f a where
@@ -8,8 +9,9 @@ type family HKD f a where
 	HKD f        a = f a
 
 data Command' f
-	= InvalidCommand (HKD f ChannelId) (HKD f String)
+	= InvalidCommand (HKD f ChannelId) (HKD f Text)
 	| PingPong (HKD f ChannelId)
+	| RandomChoice (HKD f ChannelId) (HKD f [Text])
 	| Stop
 	| None
 
