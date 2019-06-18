@@ -6,6 +6,19 @@ packages:
 extra-deps:
     - discord-haskell-0.8.3
     - polysemy-0.4.0.0
+
+    -
+        git: https://github.com/kowainik/co-log.git
+        commit: 744504305c5e44249a6606a3ba5395ba484a1cde
+        subdirs:
+            - co-log-core
+            - co-log
+            - co-log-polysemy
+    - ansi-terminal-0.9.1
+    - chronos-1.0.5
+    - torsor-0.1
+    - typerep-map-0.3.2
+
     # copied from https://github.com/isovector/polysemy/blob/master/stack.yaml
     - aeson-1.4.3.0
     - bifunctors-5.5.4
