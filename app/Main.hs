@@ -7,8 +7,9 @@ import Polysemy.Reader
 import Polysemy.Resource
 import qualified Colog as C
 import qualified Colog.Polysemy as CP
+import Data.Random.Distribution.Categorical
+import Polysemy.RandomFu
 import Discord
-import System.Random
 
 import Data.DiscordBot
 import Data.Command
@@ -19,6 +20,7 @@ main = do
 
 	(runM
 		.@ runResourceInIO)
+		. runRandomIO
 		. runReader dis
 		. CP.runLogAction @IO C.richMessageAction
 		. runGatewaySendableOutput
@@ -46,16 +48,15 @@ initBot = updateBotStatus . UpdateBotStatusOpts $ UpdateStatusOpts
 	, updateStatusAFK = False
 	}
 
-bot :: Members [DiscordBot, Lift IO] r => Sem r ()
+bot :: Members [DiscordBot, RandomFu] r => Sem r ()
 bot = getCommand >>= \case
 	BotCmd channel cmd -> case cmd of
 		InvalidCmd e -> sendMessage channel e >> bot
 		PingPong -> sendMessage channel "pong!" >> bot
-		RandomChoice as -> do
-			rng <- sendM $ randomRIO (0, length as - 1)
-			sendM $ putStrLn "log with putStrLn test"
-			sendMessage channel . snd $ as !! rng
-			bot
+		RandomChoice as ->
+			sampleRVar do weightedCategorical as
+				>>= sendMessage channel
+				>> bot
 		None -> bot
 		Stop -> return ()
 
