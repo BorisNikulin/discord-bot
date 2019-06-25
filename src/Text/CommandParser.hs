@@ -2,7 +2,9 @@ module Text.CommandParser where
 
 import Data.Void
 import Data.Char
-import Data.Text (Text, pack)
+import Data.Tuple
+import Data.Text (Text)
+import qualified Data.Text as T
 import Text.Megaparsec
 import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
@@ -29,10 +31,40 @@ stop = Stop <$ string' "stop"
 pingPong :: Parser Cmd
 pingPong = PingPong <$ string' "ping"
 
+choiceSep :: Char
+choiceSep = '|'
+
+choiceSubElement :: Parser Text
+choiceSubElement = T.cons
+	<$> label
+		do "not '_', not '" <> [choiceSep] <> "'"
+		do satisfy (\c -> c /= '_' && c /= choiceSep)
+	<*> takeWhileP
+		do Just $ "not ' ', not '" <> [choiceSep] <> "'"
+		do \c -> (not $ isSpace c) && c /= choiceSep
+
+choiceElement :: Parser Text
+choiceElement = label "an element" $
+	(T.concat .) . (:)
+	<$> choiceSubElement
+	<*> do many . try $
+		T.append
+		<$> takeWhileP Nothing isSpace
+		<*> choiceSubElement
+
+choiceWeight :: Parser Float
+choiceWeight = label " a weight" do
+	lexeme $ char '_' *> do try L.float <|> fmap (fromIntegral @Int @Float) L.decimal
+	<|> pure 1
+
+choiceOption :: Parser (Float, Text)
+choiceOption = label "an element and an optional weight"
+	$ (swap .) . (,) <$> lexeme choiceElement <*> choiceWeight
+
 randomChoice :: Parser Cmd
 randomChoice = symbol "r" *> do
-	RandomChoice . zip (repeat 1) -- TODO actually optionally parse weights
-		<$> sepBy1 (lexeme $ takeWhile1P Nothing (\c -> isAlphaNum c || isSpace c)) (symbol "|")
+	RandomChoice
+		<$> sepBy1 choiceOption do symbol "|"
 
 command :: Parser Cmd
 command = prefix *> choice [stop, pingPong, randomChoice] <* eof <|> pure None
@@ -40,4 +72,4 @@ command = prefix *> choice [stop, pingPong, randomChoice] <* eof <|> pure None
 parseCommand :: Text -> Cmd
 parseCommand t = case runParser command "" t of
 	Right cmd -> cmd
-	Left e    -> InvalidCmd . pack $ errorBundlePretty e
+	Left e    -> InvalidCmd . T.pack $ errorBundlePretty e
