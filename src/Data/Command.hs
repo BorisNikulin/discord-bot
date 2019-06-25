@@ -1,18 +1,16 @@
 module Data.Command where
 
-import Data.Functor.Identity
 import Data.Text (Text)
 import Discord
 
-type family HKD f a where
-	HKD Identity a = a
-	HKD f        a = f a
+data BotCmd = BotCmd
+	{ botCmdChannel :: ChannelId
+	, botCmdCmd :: Cmd
+	}
 
-data Command' f
-	= InvalidCommand (HKD f ChannelId) (HKD f Text)
-	| PingPong (HKD f ChannelId)
-	| RandomChoice (HKD f ChannelId) (HKD f [Text])
+data Cmd
+	= InvalidCmd Text
+	| PingPong
+	| RandomChoice [(Int, Text)]
 	| Stop
 	| None
-
-type Command = Command' Identity

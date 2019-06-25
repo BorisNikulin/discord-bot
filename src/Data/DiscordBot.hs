@@ -27,10 +27,12 @@ data SomeRequest where
 
 type DiscordConnection = (RestChan, Gateway, [ThreadIdType])
 
-data UpdateBotStatusOpts = UpdateBotStatusOpts UpdateStatusOpts | UpdateBotStatusVoiceOpts UpdateStatusVoiceOpts
+data UpdateBotStatusOpts
+	= UpdateBotStatusOpts UpdateStatusOpts
+	| UpdateBotStatusVoiceOpts UpdateStatusVoiceOpts
 
 data DiscordBot m a where
-	GetCommand :: DiscordBot m Command
+	GetCommand :: DiscordBot m BotCmd
 	SendMessage :: ChannelId -> T.Text -> DiscordBot m ()
 	UpdateBotStatus :: UpdateBotStatusOpts -> DiscordBot m ()
 
@@ -46,28 +48,23 @@ logDiscordbot = intercept \case
 			logInfo = C.LogAction $ logMsg C.Error
 	UpdateBotStatus opts -> logMsg Info "UpdateBotStatus" >> updateBotStatus opts
 
-reinterpretDiscordBot :: Sem (DiscordBot ': r) a -> Sem (Input Command ': Output SomeRequest ': Output GatewaySendable ': r) a
+reinterpretDiscordBot :: Sem (DiscordBot ': r) a -> Sem (Input BotCmd ': Output SomeRequest ': Output GatewaySendable ': r) a
 reinterpretDiscordBot = reinterpret3 \case
-	GetCommand -> input @Command
+	GetCommand -> input @BotCmd
 	SendMessage channel txt -> output . SomeRequest $ CreateMessage channel txt
 	UpdateBotStatus opts -> case opts of
 		UpdateBotStatusOpts o -> output $ UpdateStatus o
 		UpdateBotStatusVoiceOpts o -> output $ UpdateStatusVoice o
 
-reinterpretCommandInput :: Sem (Input Command ': r) a -> Sem (Input Event ': r) a
+reinterpretCommandInput :: Sem (Input BotCmd ': r) a -> Sem (Input Event ': r) a
 reinterpretCommandInput = reinterpret \case
 	Input -> input >>= \case
 		MessageCreate m
 			| not $ fromBot m -> return let channel = messageChannel m
 				in case parseCommand $ messageText m of
-					InvalidCommand _ (Just e) -> InvalidCommand channel ("```" <> e <> "```")
-					InvalidCommand _ Nothing  -> InvalidCommand channel "invalid command"
-					PingPong _                -> PingPong channel
-					RandomChoice _ (Just as)  -> RandomChoice channel as
-					RandomChoice _ Nothing    -> InvalidCommand channel "invalid command: random choice needs elements"
-					Stop                      -> Stop
-					None                      -> None
-		_ -> return None
+					InvalidCmd e -> BotCmd channel $ InvalidCmd ("```" <> e <> "```")
+					cmd          -> BotCmd channel cmd
+		_ -> return $ BotCmd 0 None
 
 fromBot :: Message -> Bool
 fromBot m = userIsBot (messageAuthor m)

@@ -23,21 +23,21 @@ symbol = L.symbol spaceConsumer
 prefix :: Parser Text
 prefix = string "!"
 
-stop :: Parser (Command' Maybe)
+stop :: Parser Cmd
 stop = Stop <$ string' "stop"
 
-pingPong :: Parser (Command' Maybe)
-pingPong = PingPong Nothing <$ string' "ping"
+pingPong :: Parser Cmd
+pingPong = PingPong <$ string' "ping"
 
-randomChoice :: Parser (Command' Maybe)
+randomChoice :: Parser Cmd
 randomChoice = symbol "r" *> do
-	RandomChoice Nothing . Just
+	RandomChoice . zip (repeat 1) -- TODO actually optionally parse weights
 		<$> sepBy1 (lexeme $ takeWhile1P Nothing (\c -> isAlphaNum c || isSpace c)) (symbol "|")
 
-command :: Parser (Command' Maybe)
+command :: Parser Cmd
 command = prefix *> choice [stop, pingPong, randomChoice] <* eof <|> pure None
 
-parseCommand :: Text -> Command' Maybe
+parseCommand :: Text -> Cmd
 parseCommand t = case runParser command "" t of
 	Right cmd -> cmd
-	Left e    -> InvalidCommand Nothing . Just. pack $ errorBundlePretty e
+	Left e    -> InvalidCmd . pack $ errorBundlePretty e

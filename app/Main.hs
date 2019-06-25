@@ -48,15 +48,16 @@ initBot = updateBotStatus . UpdateBotStatusOpts $ UpdateStatusOpts
 
 bot :: Members [DiscordBot, Lift IO] r => Sem r ()
 bot = getCommand >>= \case
-	InvalidCommand channel e -> sendMessage channel e >> bot
-	PingPong channel -> sendMessage channel "pong!" >> bot
-	RandomChoice channel as -> do
-		rng <- sendM $ randomRIO (0, length as - 1)
-		sendM $ putStrLn "log with putStrLn test"
-		sendMessage channel (as !! rng)
-		bot
-	None -> bot
-	Stop -> return ()
+	BotCmd channel cmd -> case cmd of
+		InvalidCmd e -> sendMessage channel e >> bot
+		PingPong -> sendMessage channel "pong!" >> bot
+		RandomChoice as -> do
+			rng <- sendM $ randomRIO (0, length as - 1)
+			sendM $ putStrLn "log with putStrLn test"
+			sendMessage channel . snd $ as !! rng
+			bot
+		None -> bot
+		Stop -> return ()
 
 getBotToken :: IO T.Text
 getBotToken = T.strip <$> TIO.readFile "./secrets/bot-token"
