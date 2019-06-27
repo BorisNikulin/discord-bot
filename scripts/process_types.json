@@ -1,0 +1,3 @@
+{
+	"bot": "mkdir secrets; cd secrets; echo $BOT_TOKEN > bot-token; cd ..; ./discord-bot-exe"
+}
