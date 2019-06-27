@@ -1,0 +1,39 @@
+variables:
+    STACK_ROOT: "${CI_PROJECT_DIR}/.stack"
+
+stages:
+    - test_build
+    - post_build_test
+    - deploy
+
+build:
+    image: fpco/stack-build:lts-13.25
+    stage: test_build
+    script:
+        - mkdir build
+        - stack install --system-ghc --local-bin-path build discord-bot
+        - cp scripts/deploy.py build/deploy.py
+        - cp scripts/process_types.json build/process_types.json
+    cache:
+        key: build
+        paths:
+            - .stack
+            - .stack-work
+    artifacts:
+        paths:
+            - build/
+
+deploy:
+    image: python:3.7.3-alpine
+    stage: deploy
+    variables:
+        GIT_STRATEGY: none
+    script:
+        - apk add curl
+        - mv build/ app/
+        - mv app/deploy.py ./deploy.py
+        - mv app/process_types.json ./process_types.json
+        - tar czfv slug.tgz ./app
+        - ./deploy.py slug.tgz process_types.json
+    only:
+        - master
