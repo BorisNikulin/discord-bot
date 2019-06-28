@@ -26,13 +26,15 @@ build:
 deploy:
     image: python:3.7.3-alpine
     stage: deploy
+    environment:
+        name: production
     variables:
         GIT_STRATEGY: none
     script:
         - apk add curl
-        - mv build/ app/
-        - mv app/deploy.py ./deploy.py
-        - mv app/process_types.json ./process_types.json
+        - cd build
+        - mkdir app
+        - mv discord-bot-exe app
         - tar czfv slug.tgz ./app
         - ./deploy.py slug.tgz process_types.json
     only:
