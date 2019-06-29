@@ -42,40 +42,37 @@ print(
     {heroku_url_base}/slugs
     """)
 
-upload_info = json.loads(subprocess.check_output(
-    f""" curl -sSX POST \
-    -H 'Content-Type: application/json' \
-    -H 'Accept: application/vnd.heroku+json; version=3' \
-    -H 'Authorization: Bearer {heroku_api_key}' \
-    -d '{json.dumps(heroku_proc_types)}' \
-    {heroku_url_base}/slugs
-    """,
-    shell=True))
+upload_info = json.loads(subprocess.check_output([
+    "curl", "-sSX", "PUT",
+    "-H", "Content-Type: application/json",
+    "-H", "Accept: application/vnd.heroku+json; version=3",
+    "-H", "Authorization: Bearer {heroku_api_key}",
+    "-d", json.dumps(heroku_proc_types),
+    f"{heroku_url_base}/slugs"
+    ], shell=True))
 print()
 
 print(f"slug id: {upload_info['id']}")
 print()
 
-subprocess.run(
-    f""" curl -sSX PUT \
-    -H 'Content-Type:' \
-    --data-binary @"{slug_file_path}" \
-    "{upload_info['blob']['url']}"
-    """,
-    shell=True)
+subprocess.run([
+    "curl", "-sSX", "PUT",
+    "-H", "Content-Type:",
+    "--data-binary", '@"{slug_file_path}"',
+    f"{upload_info['blob']['url']}",
+    ], shell=True)
 
 print(
     json.dumps(
         json.loads(
-            subprocess.check_output(
-                f""" curl -sSX POST \
-                -H "Content-Type: application/json" \
-                -H "Accept: application/vnd.heroku+json; version=3" \
-                -H 'Authorization: Bearer {heroku_api_key}' \
-                -d '{{"slug":"{upload_info['id']}"}}' \
-                "{heroku_url_base}/releases"
-                """,
-                shell=True
+            subprocess.check_output([
+                "curl", "-sSX", "PUT",
+                "-H", "Content-Type: application/json",
+                "-H", "Accept: application/vnd.heroku+json; version=3",
+                "-H", "Authorization: Bearer {heroku_api_key}",
+                "-d", """{{"slug":"{upload_info['id']}"}}""",
+                f"{heroku_url_base}/release",
+                ], shell=True
             )
         ),
         indent=4
