@@ -2,28 +2,38 @@
 
 import sys
 import os
-import subprocess
+import http.client
+import urllib.request
 import json
 import hashlib
 
 # see https://devcenter.heroku.com/articles/platform-api-deploying-slugs
 
 # requires 1 arg for the slug file and a 2nd for the process_types.json
-slug_file_path = sys.argv[1]
-with open(sys.argv[2], 'rb') as slug:
-    heroku_proc_types = json.load(slug)
+slug = open(sys.argv[1], 'rb')
+with open(sys.argv[2], 'r') as proc_types:
+    heroku_proc_types = json.load(proc_types)
 
-    slug_data = slug.read()
-    digest = hashlib.sha256()
-    digest.update(slug_data)
-    slug_checksum = digest.hexdigest()
+slug_data = slug.read()
 
-    del slug_data
-    del digest
+digest = hashlib.sha256()
+digest.update(slug_data)
+slug_checksum = digest.hexdigest()
+
+del digest
 
 # requires these custom environmnet variables
 heroku_api_key = os.environ['HEROKU_API_KEY']
 heroku_url_base = os.environ['HEROKU_URL_BASE']
+heroku_app_name = os.environ['HEROKU_APP_NAME']
+
+heroku_api_con = http.client.HTTPSConnection(heroku_url_base)
+heroku_headers = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/vnd.heroku+json; version=3',
+    'Authorization': f'Bearer {heroku_api_key}'
+    }
+
 
 slug_create = {
     'process_types': heroku_proc_types,
@@ -32,50 +42,45 @@ slug_create = {
     'commit_description': os.environ['CI_COMMIT_TITLE']
 }
 
+heroku_api_con.request(
+    'POST',
+    f'/apps/{heroku_app_name}/slugs',
+    headers=heroku_headers,
+    body=json.dumps(slug_create)
+)
+
+slug_upload_info = json.loads(heroku_api_con.getresponse().read())
+
 print('---')
-print(
-    f""" curl -sSX POST \
-    -H 'Content-Type: application/json' \
-    -H 'Accept: application/vnd.heroku+json; version=3' \
-    -H 'Authorization: Bearer {{heroku_api_key}}' \
-    -d '{json.dumps(slug_create, indent=4)}' \
-    {heroku_url_base}/slugs
-    """)
-
-upload_info = json.loads(subprocess.check_output([
-    "curl", "-sSX", "PUT",
-    "-H", "Content-Type: application/json",
-    "-H", "Accept: application/vnd.heroku+json; version=3",
-    "-H", "Authorization: Bearer {heroku_api_key}",
-    "-d", json.dumps(heroku_proc_types),
-    f"{heroku_url_base}/slugs"
-    ], shell=True))
+print('slug provision')
+print(json.dumps(slug_upload_info, indent=4))
 print()
 
-print(f"slug id: {upload_info['id']}")
-print()
 
-subprocess.run([
-    "curl", "-sSX", "PUT",
-    "-H", "Content-Type:",
-    "--data-binary", '@"{slug_file_path}"',
-    f"{upload_info['blob']['url']}",
-    ], shell=True)
-
-print(
-    json.dumps(
-        json.loads(
-            subprocess.check_output([
-                "curl", "-sSX", "PUT",
-                "-H", "Content-Type: application/json",
-                "-H", "Accept: application/vnd.heroku+json; version=3",
-                "-H", "Authorization: Bearer {heroku_api_key}",
-                "-d", """{{"slug":"{upload_info['id']}"}}""",
-                f"{heroku_url_base}/release",
-                ], shell=True
-            )
-        ),
-        indent=4
+slug_upload_data_response = urllib.request.urlopen(
+    urllib.request.Request(
+        slug_upload_info['blob']['url'],
+        method='PUT',
+        headers={'Content-Type': ''},
+        data=slug_data
     )
 )
-print('---')
+
+slug.close()
+
+print('slug upload')
+print(f'HTTP code: {slug_upload_data_response.getcode()}')
+
+release_create = {
+    'slug': slug_upload_info['id']
+}
+
+heroku_api_con.request(
+    'POST',
+    f'/apps/{heroku_app_name}/releases',
+    headers=heroku_headers,
+    body=json.dumps(release_create)
+)
+
+print('release provision')
+print(json.dumps(json.loads(heroku_api_con.getresponse().read()), indent=4))
