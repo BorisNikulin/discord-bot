@@ -31,7 +31,6 @@ deploy:
     variables:
         GIT_STRATEGY: none
     script:
-        - apk add curl
         - cd build
         - mkdir app
         - mv discord-bot-exe app
