@@ -39,7 +39,7 @@ initBot :: Member DiscordBot r => Sem r ()
 initBot = updateBotStatus . UpdateBotStatusOpts $ UpdateStatusOpts
 	{ updateStatusSince = Nothing
 	, updateStatusGame = Just Activity
-		{ activityName = "with free monads"
+		{ activityName = "with freer monads"
 		, activityType = ActivityTypeGame
 		, activityUrl = Nothing
 		}
@@ -56,7 +56,7 @@ bot = getCommand >>= \case
 			let choiceDist = fromWeightedList as
 
 			if numEvents choiceDist <= 0
-				then sendMessage channel "```error: the sum of all weights must be effectively non zero```"
+				then sendMessage channel "```error: the sum of all weights must be effectively greater than zero```"
 				else sampleRVar (rvar choiceDist) >>= sendMessage channel
 			bot
 		None -> bot
