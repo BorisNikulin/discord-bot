@@ -29,7 +29,7 @@ slug_create = {
     'process_types': heroku_proc_types,
     'checksum': f'SHA256:{slug_checksum}',
     'commit': os.environ['CI_COMMIT_SHA'],
-    'commit_description': os.environ['CI_COMMIT_TTILE']
+    'commit_description': os.environ['CI_COMMIT_TITLE']
 }
 
 print('---')
