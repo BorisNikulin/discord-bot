@@ -7,6 +7,7 @@ import Polysemy.Reader
 import Polysemy.Resource
 import qualified Colog as C
 import qualified Colog.Polysemy as CP
+import Data.Random.Distribution
 import Data.Random.Distribution.Categorical
 import Polysemy.RandomFu
 import Discord
@@ -30,8 +31,6 @@ main = do
 		. reinterpretDiscordBot
 		. logDiscordbot
 		$ (initBot >> bot) `finally` exit
-	--where
-		--logger = C.upgradeMessageAction C.defaultFieldMap $ C.cmapM C.fmtRichMessageDefault $ C.cmap C.fmtMessage C.logTextStdout
 
 exit :: Members '[Reader DiscordConnection, Lift IO] r => Sem r ()
 exit = ask @DiscordConnection >>= sendM . stopDiscord
@@ -53,10 +52,13 @@ bot = getCommand >>= \case
 	BotCmd channel cmd -> case cmd of
 		InvalidCmd e -> sendMessage channel e >> bot
 		PingPong -> sendMessage channel "pong!" >> bot
-		RandomChoice as ->
-			sampleRVar do weightedCategorical as
-				>>= sendMessage channel
-				>> bot
+		RandomChoice as -> do
+			let choiceDist = fromWeightedList as
+
+			if numEvents choiceDist <= 0
+				then sendMessage channel "```error: the sum of all weights must be effectively non zero```"
+				else sampleRVar (rvar choiceDist) >>= sendMessage channel
+			bot
 		None -> bot
 		Stop -> return ()
 
