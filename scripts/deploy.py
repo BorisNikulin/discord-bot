@@ -70,6 +70,7 @@ slug.close()
 
 print('slug upload')
 print(f'HTTP code: {slug_upload_data_response.getcode()}')
+print()
 
 release_create = {
     'slug': slug_upload_info['id']
