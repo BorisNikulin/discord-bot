@@ -73,7 +73,7 @@ runEventInput :: Members '[Reader DiscordConnection, Lift IO] r => Sem (Input Ev
 runEventInput = interpret \case
 	Input -> ask @DiscordConnection >>= sendM . nextEvent >>= \case
 		Right e -> return e
-		_ -> error "TODO"
+		_ -> error "did not connect"
 
 runSomeRequestOutput :: Members '[Reader DiscordConnection, Lift IO] r => Sem (Output SomeRequest ': r) a -> Sem r a
 runSomeRequestOutput = interpret \case
