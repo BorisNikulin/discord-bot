@@ -65,7 +65,7 @@ reinterpretCommandInput = reinterpret \case
         				in case parseCommand $ messageText m of
         					Just (InvalidCmd e) -> BotCmd channel $ InvalidCmd ("```" <> e <> "```")
         					Just cmd            -> BotCmd channel cmd
-							Nothing             -> go
+						Nothing             -> go
         			| otherwise -> go
         		_ -> go
 
