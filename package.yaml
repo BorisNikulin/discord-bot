@@ -24,6 +24,7 @@ dependencies:
     - co-log-polysemy
     - random-fu >= 0.2.5.0 && <0.3.0.0
     - polysemy-RandomFu
+    - githash >= 0.1.3 && < 0.1.4
 
 default-extensions:
     - OverloadedStrings

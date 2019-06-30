@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Main where
 
 import qualified Data.Text as T
@@ -11,9 +13,13 @@ import Data.Random.Distribution
 import Data.Random.Distribution.Categorical
 import Polysemy.RandomFu
 import Discord
+import GitHash
 
 import Data.DiscordBot
 import Data.Command
+
+gitInfo :: GitInfo
+gitInfo = $$tGitInfoCwd
 
 main :: IO ()
 main = do
@@ -59,6 +65,13 @@ bot = getCommand >>= \case
 				then sendMessage channel "```error: the sum of all weights must be effectively greater than zero```"
 				else sampleRVar (rvar choiceDist) >>= sendMessage channel
 			bot
+		Version -> sendMessage channel (
+				"``` version: "
+				<> T.pack do giHash gitInfo
+				<> " ("
+				<> T.pack do giCommitDate gitInfo
+				<> ")```"
+			) >> bot
 		None -> bot
 		Stop -> return ()
 
