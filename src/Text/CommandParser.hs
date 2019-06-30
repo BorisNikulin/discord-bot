@@ -81,4 +81,4 @@ command = prefix *> (Just <$> cmd) <* eof <|> pure Nothing where
 parseCommand :: Text -> Maybe Cmd
 parseCommand t = case runParser command "" t of
 	Right cmd -> cmd
-	Left e    -> InvalidCmd . T.pack $ errorBundlePretty e
+	Left e    -> Just . InvalidCmd . T.pack $ errorBundlePretty e
