@@ -70,7 +70,7 @@ version :: Parser Cmd
 version = Version <$ string "version"
 
 command :: Parser (Maybe Cmd)
-command = prefix *> (Just <$> cmd) <* eof <|> pure None where
+command = prefix *> (Just <$> cmd) <* eof <|> pure Nothing where
 	cmd = choice
 		[ stop
 		, pingPong
