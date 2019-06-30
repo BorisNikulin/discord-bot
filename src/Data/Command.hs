@@ -14,5 +14,4 @@ data Cmd
 	| RandomChoice [(Float, Text)]
 	| Version
 	| Stop
-	| None
 	deriving Show
