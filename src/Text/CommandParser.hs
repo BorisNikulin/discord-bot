@@ -69,8 +69,8 @@ randomChoice = symbol "r" *> do
 version :: Parser Cmd
 version = Version <$ string "version"
 
-command :: Parser Cmd
-command = prefix *> cmd <* eof <|> pure None where
+command :: Parser (Maybe Cmd)
+command = prefix *> (Just <$> cmd) <* eof <|> pure None where
 	cmd = choice
 		[ stop
 		, pingPong
@@ -78,7 +78,7 @@ command = prefix *> cmd <* eof <|> pure None where
 		, version
 		]
 
-parseCommand :: Text -> Cmd
+parseCommand :: Text -> Maybe Cmd
 parseCommand t = case runParser command "" t of
 	Right cmd -> cmd
 	Left e    -> InvalidCmd . T.pack $ errorBundlePretty e

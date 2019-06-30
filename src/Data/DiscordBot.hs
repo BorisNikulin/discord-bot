@@ -63,8 +63,9 @@ reinterpretCommandInput = reinterpret \case
         		MessageCreate m
         			| not $ fromBot m -> return let channel = messageChannel m
         				in case parseCommand $ messageText m of
-        					InvalidCmd e -> BotCmd channel $ InvalidCmd ("```" <> e <> "```")
-        					cmd          -> BotCmd channel cmd
+        					Just (InvalidCmd e) -> BotCmd channel $ InvalidCmd ("```" <> e <> "```")
+        					Just cmd            -> BotCmd channel cmd
+							Nothing             -> go
         			| otherwise -> go
         		_ -> go
 
