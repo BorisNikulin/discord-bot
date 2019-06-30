@@ -12,6 +12,7 @@ data Cmd
 	= InvalidCmd Text
 	| PingPong
 	| RandomChoice [(Float, Text)]
+	| Version
 	| Stop
 	| None
 	deriving Show
