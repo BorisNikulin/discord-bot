@@ -58,13 +58,16 @@ reinterpretDiscordBot = reinterpret3 \case
 
 reinterpretCommandInput :: Sem (Input BotCmd ': r) a -> Sem (Input Event ': r) a
 reinterpretCommandInput = reinterpret \case
-	Input -> input >>= \case
-		MessageCreate m
-			| not $ fromBot m -> return let channel = messageChannel m
-				in case parseCommand $ messageText m of
-					InvalidCmd e -> BotCmd channel $ InvalidCmd ("```" <> e <> "```")
-					cmd          -> BotCmd channel cmd
-		_ -> return $ BotCmd 0 None
+	Input -> go where
+		go = input >>= \case
+        		MessageCreate m
+        			| not $ fromBot m -> let channel = messageChannel m
+        				in case parseCommand $ messageText m of
+        					Just (InvalidCmd e) -> return . BotCmd channel $ InvalidCmd ("```" <> e <> "```")
+        					Just cmd            -> return $ BotCmd channel cmd
+						Nothing             -> go
+        			| otherwise -> go
+        		_ -> go
 
 fromBot :: Message -> Bool
 fromBot m = userIsBot (messageAuthor m)

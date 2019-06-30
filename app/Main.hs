@@ -72,7 +72,6 @@ bot = getCommand >>= \case
 				<> T.pack do giCommitDate gitInfo
 				<> ")```"
 			) >> bot
-		None -> bot
 		Stop -> return ()
 
 getBotToken :: IO T.Text
