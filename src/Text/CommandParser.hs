@@ -66,8 +66,17 @@ randomChoice = symbol "r" *> do
 	RandomChoice
 		<$> sepBy1 choiceOption do symbol "|"
 
+version :: Parser Cmd
+version = Version <$ string "version"
+
 command :: Parser Cmd
-command = prefix *> choice [stop, pingPong, randomChoice] <* eof <|> pure None
+command = prefix *> cmd <* eof <|> pure None where
+	cmd = choice
+		[ stop
+		, pingPong
+		, randomChoice
+		, version
+		]
 
 parseCommand :: Text -> Cmd
 parseCommand t = case runParser command "" t of
