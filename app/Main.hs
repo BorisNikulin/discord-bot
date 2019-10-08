@@ -12,7 +12,7 @@ import qualified Colog.Polysemy as CP
 import Data.Random.Distribution
 import Data.Random.Distribution.Categorical
 import Polysemy.RandomFu
-import Discord
+import qualified Discord as D
 import GitHash
 
 import Data.DiscordBot
@@ -23,10 +23,10 @@ gitInfo = $$tGitInfoCwd
 
 main :: IO ()
 main = do
-	dis <- loginRestGateway . Auth =<< getBotToken
+	dis <- D.loginRestGateway . D.Auth =<< getBotToken
 
-	(runM
-		.@ runResourceInIO)
+	runM
+		. resourceToIO
 		. runRandomIO
 		. runReader dis
 		. CP.runLogAction @IO C.richMessageAction
@@ -38,19 +38,19 @@ main = do
 		. logDiscordbot
 		$ (initBot >> bot) `finally` exit
 
-exit :: Members '[Reader DiscordConnection, Lift IO] r => Sem r ()
-exit = ask @DiscordConnection >>= sendM . stopDiscord
+exit :: Members '[Reader DiscordConnection, Embed IO] r => Sem r ()
+exit = ask @DiscordConnection >>= embed . D.stopDiscord
 
 initBot :: Member DiscordBot r => Sem r ()
-initBot = updateBotStatus . UpdateBotStatusOpts $ UpdateStatusOpts
-	{ updateStatusSince = Nothing
-	, updateStatusGame = Just Activity
-		{ activityName = "with freer monads"
-		, activityType = ActivityTypeGame
-		, activityUrl = Nothing
+initBot = updateBotStatus . UpdateBotStatusOpts $ D.UpdateStatusOpts
+	{ D.updateStatusSince = Nothing
+	, D.updateStatusGame = Just D.Activity
+		{ D.activityName = "with freer monads"
+		, D.activityType = D.ActivityTypeGame
+		, D.activityUrl = Nothing
 		}
-	, updateStatusNewStatus = UpdateStatusOnline
-	, updateStatusAFK = False
+	, D.updateStatusNewStatus = D.UpdateStatusOnline
+	, D.updateStatusAFK = False
 	}
 
 bot :: Members [DiscordBot, RandomFu] r => Sem r ()
