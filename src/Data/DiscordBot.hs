@@ -60,28 +60,28 @@ reinterpretCommandInput :: Sem (Input BotCmd ': r) a -> Sem (Input Event ': r) a
 reinterpretCommandInput = reinterpret \case
 	Input -> go where
 		go = input >>= \case
-        		MessageCreate m
-        			| not $ fromBot m -> let channel = messageChannel m
-        				in case parseCommand $ messageText m of
-        					Just (InvalidCmd e) -> return . BotCmd channel $ InvalidCmd ("```" <> e <> "```")
-        					Just cmd            -> return $ BotCmd channel cmd
-						Nothing             -> go
-        			| otherwise -> go
-        		_ -> go
+				MessageCreate m
+					| not $ fromBot m -> let channel = messageChannel m
+						in case parseCommand $ messageText m of
+							Just (InvalidCmd e) -> return . BotCmd channel $ InvalidCmd ("```" <> e <> "```")
+							Just cmd            -> return $ BotCmd channel cmd
+							Nothing             -> go
+					| otherwise -> go
+				_ -> go
 
 fromBot :: Message -> Bool
 fromBot m = userIsBot (messageAuthor m)
 
-runEventInput :: Members '[Reader DiscordConnection, Lift IO] r => Sem (Input Event ': r) a -> Sem r a
+runEventInput :: Members '[Reader DiscordConnection, Embed IO] r => Sem (Input Event ': r) a -> Sem r a
 runEventInput = interpret \case
 	Input -> ask @DiscordConnection >>= sendM . nextEvent >>= \case
 		Right e -> return e
 		_ -> error "did not connect"
 
-runSomeRequestOutput :: Members '[Reader DiscordConnection, Lift IO] r => Sem (Output SomeRequest ': r) a -> Sem r a
+runSomeRequestOutput :: Members '[Reader DiscordConnection, Embed IO] r => Sem (Output SomeRequest ': r) a -> Sem r a
 runSomeRequestOutput = interpret \case
 	Output (SomeRequest r) -> ask @DiscordConnection >>= sendM . flip restCall r >> return ()
 
-runGatewaySendableOutput :: Members '[Reader DiscordConnection, Lift IO] r => Sem (Output GatewaySendable ': r) a -> Sem r a
+runGatewaySendableOutput :: Members '[Reader DiscordConnection, Embed IO] r => Sem (Output GatewaySendable ': r) a -> Sem r a
 runGatewaySendableOutput = interpret \case
 	Output s -> ask @DiscordConnection >>= sendM . flip sendCommand s >> return ()
