@@ -13,7 +13,7 @@ import Colog hiding (Message, logMsg, logInfo)
 import qualified Colog.Core as C
 import qualified Colog.Message as C
 import qualified Colog.Polysemy as CP
-import Discord
+import qualified Discord as D
 import GHC.Stack
 
 import Data.Command
@@ -23,17 +23,17 @@ logMsg:: Member (CP.Log C.Message) r => C.Severity -> T.Text -> Sem r ()
 logMsg s m = withFrozenCallStack (CP.log $ Msg s callStack m)
 
 data SomeRequest where
-	SomeRequest :: (FromJSON a, Request (r a)) => r a -> SomeRequest
+	SomeRequest :: (FromJSON a, D.Request (r a)) => r a -> SomeRequest
 
-type DiscordConnection = (RestChan, Gateway, [ThreadIdType])
+type DiscordConnection = (D.RestChan, D.Gateway, [D.ThreadIdType])
 
 data UpdateBotStatusOpts
-	= UpdateBotStatusOpts UpdateStatusOpts
-	| UpdateBotStatusVoiceOpts UpdateStatusVoiceOpts
+	= UpdateBotStatusOpts D.UpdateStatusOpts
+	| UpdateBotStatusVoiceOpts D.UpdateStatusVoiceOpts
 
 data DiscordBot m a where
 	GetCommand :: DiscordBot m BotCmd
-	SendMessage :: ChannelId -> T.Text -> DiscordBot m ()
+	SendMessage :: D.ChannelId -> T.Text -> DiscordBot m ()
 	UpdateBotStatus :: UpdateBotStatusOpts -> DiscordBot m ()
 
 makeSem ''DiscordBot
@@ -48,40 +48,40 @@ logDiscordbot = intercept \case
 			logInfo = C.LogAction $ logMsg C.Error
 	UpdateBotStatus opts -> logMsg Info "UpdateBotStatus" >> updateBotStatus opts
 
-reinterpretDiscordBot :: Sem (DiscordBot ': r) a -> Sem (Input BotCmd ': Output SomeRequest ': Output GatewaySendable ': r) a
+reinterpretDiscordBot :: Sem (DiscordBot ': r) a -> Sem (Input BotCmd ': Output SomeRequest ': Output D.GatewaySendable ': r) a
 reinterpretDiscordBot = reinterpret3 \case
 	GetCommand -> input @BotCmd
-	SendMessage channel txt -> output . SomeRequest $ CreateMessage channel txt
+	SendMessage channel txt -> output . SomeRequest $ D.CreateMessage channel txt
 	UpdateBotStatus opts -> case opts of
-		UpdateBotStatusOpts o -> output $ UpdateStatus o
-		UpdateBotStatusVoiceOpts o -> output $ UpdateStatusVoice o
+		UpdateBotStatusOpts o -> output $ D.UpdateStatus o
+		UpdateBotStatusVoiceOpts o -> output $ D.UpdateStatusVoice o
 
-reinterpretCommandInput :: Sem (Input BotCmd ': r) a -> Sem (Input Event ': r) a
+reinterpretCommandInput :: Sem (Input BotCmd ': r) a -> Sem (Input D.Event ': r) a
 reinterpretCommandInput = reinterpret \case
 	Input -> go where
 		go = input >>= \case
-        		MessageCreate m
-        			| not $ fromBot m -> let channel = messageChannel m
-        				in case parseCommand $ messageText m of
-        					Just (InvalidCmd e) -> return . BotCmd channel $ InvalidCmd ("```" <> e <> "```")
-        					Just cmd            -> return $ BotCmd channel cmd
-						Nothing             -> go
-        			| otherwise -> go
-        		_ -> go
+				D.MessageCreate m
+					| not $ fromBot m -> let channel = D.messageChannel m
+						in case parseCommand $ D.messageText m of
+							Just (InvalidCmd e) -> return . BotCmd channel $ InvalidCmd ("```" <> e <> "```")
+							Just cmd            -> return $ BotCmd channel cmd
+							Nothing             -> go
+					| otherwise -> go
+				_ -> go
 
-fromBot :: Message -> Bool
-fromBot m = userIsBot (messageAuthor m)
+fromBot :: D.Message -> Bool
+fromBot m = D.userIsBot (D.messageAuthor m)
 
-runEventInput :: Members '[Reader DiscordConnection, Lift IO] r => Sem (Input Event ': r) a -> Sem r a
+runEventInput :: Members '[Reader DiscordConnection, Embed IO] r => Sem (Input D.Event ': r) a -> Sem r a
 runEventInput = interpret \case
-	Input -> ask @DiscordConnection >>= sendM . nextEvent >>= \case
+	Input -> ask @DiscordConnection >>= embed . D.nextEvent >>= \case
 		Right e -> return e
 		_ -> error "did not connect"
 
-runSomeRequestOutput :: Members '[Reader DiscordConnection, Lift IO] r => Sem (Output SomeRequest ': r) a -> Sem r a
+runSomeRequestOutput :: Members '[Reader DiscordConnection, Embed IO] r => Sem (Output SomeRequest ': r) a -> Sem r a
 runSomeRequestOutput = interpret \case
-	Output (SomeRequest r) -> ask @DiscordConnection >>= sendM . flip restCall r >> return ()
+	Output (SomeRequest r) -> ask @DiscordConnection >>= embed . flip D.restCall r >> return ()
 
-runGatewaySendableOutput :: Members '[Reader DiscordConnection, Lift IO] r => Sem (Output GatewaySendable ': r) a -> Sem r a
+runGatewaySendableOutput :: Members '[Reader DiscordConnection, Embed IO] r => Sem (Output D.GatewaySendable ': r) a -> Sem r a
 runGatewaySendableOutput = interpret \case
-	Output s -> ask @DiscordConnection >>= sendM . flip sendCommand s >> return ()
+	Output s -> ask @DiscordConnection >>= embed . flip D.sendCommand s >> return ()
