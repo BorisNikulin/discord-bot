@@ -7,6 +7,7 @@ import qualified Data.Text.IO as TIO
 import Polysemy
 import Polysemy.Reader
 import Polysemy.Resource
+import Colog hiding (Message, logMsg, logInfo)
 import qualified Colog as C
 import qualified Colog.Polysemy as CP
 import Data.Random.Distribution
@@ -35,7 +36,7 @@ main = do
 		. runEventInput
 		. reinterpretCommandInput
 		. reinterpretDiscordBot
-		. logDiscordbot
+		. logDiscordBot
 		$ (initBot >> bot) `finally` exit
 
 exit :: Members '[Reader DiscordConnection, Embed IO] r => Sem r ()
@@ -53,13 +54,15 @@ initBot = updateBotStatus . UpdateBotStatusOpts $ D.UpdateStatusOpts
 	, D.updateStatusAFK = False
 	}
 
-bot :: Members [DiscordBot, RandomFu] r => Sem r ()
+bot :: Members [DiscordBot, CP.Log C.Message, RandomFu] r => Sem r ()
 bot = getCommand >>= \case
 	BotCmd channel cmd -> case cmd of
 		InvalidCmd e -> sendMessage channel e >> bot
 		PingPong -> sendMessage channel "pong!" >> bot
 		RandomChoice as -> do
 			let choiceDist = fromWeightedList as
+
+			logMsg Debug $ "Distribution: " <> T.pack (show choiceDist)
 
 			if numEvents choiceDist <= 0
 				then sendMessage channel "```error: the sum of all weights must be effectively greater than zero```"
