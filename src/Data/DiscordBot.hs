@@ -19,7 +19,7 @@ import GHC.Stack
 import Data.Command
 import Text.CommandParser
 
-logMsg:: Member (CP.Log C.Message) r => C.Severity -> T.Text -> Sem r ()
+logMsg:: (HasCallStack, Member (CP.Log C.Message) r) => C.Severity -> T.Text -> Sem r ()
 logMsg s m = withFrozenCallStack (CP.log $ Msg s callStack m)
 
 data SomeRequest where
@@ -38,15 +38,19 @@ data DiscordBot m a where
 
 makeSem ''DiscordBot
 
-logDiscordbot :: Members '[CP.Log C.Message, DiscordBot] r => Sem r a -> Sem r a
-logDiscordbot = intercept \case
-	GetCommand -> logMsg Info "GetCommand" >> getCommand
-	SendMessage channel txt -> flip unLogAction (channel, txt) do
-		(T.pack . show >$< logInfo) >*< logInfo
-		>> sendMessage channel txt
-		where
-			logInfo = C.LogAction $ logMsg C.Error
-	UpdateBotStatus opts -> logMsg Info "UpdateBotStatus" >> updateBotStatus opts
+logDiscordBot :: Members '[CP.Log C.Message, DiscordBot] r => Sem r a -> Sem r a
+logDiscordBot = intercept \case
+	GetCommand -> do
+		logMsg Info "Waiting for command"
+		cmd <- getCommand
+		logMsg Info $ "Got command from channel " <> T.pack (show $ botCmdChannel cmd)
+		logMsg Info $ "Got command: " <> T.pack (show $ botCmdCmd cmd)
+		return cmd
+	SendMessage channel txt -> do
+		logMsg Info $ "Replying to channel " <> T.pack (show channel)
+		logMsg Info $ "Replying with message: " <> txt
+		sendMessage channel txt
+	UpdateBotStatus opts -> logMsg Info "Updating bot status" >> updateBotStatus opts
 
 reinterpretDiscordBot :: Sem (DiscordBot ': r) a -> Sem (Input BotCmd ': Output SomeRequest ': Output D.GatewaySendable ': r) a
 reinterpretDiscordBot = reinterpret3 \case
