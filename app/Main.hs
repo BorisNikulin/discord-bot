@@ -34,6 +34,7 @@ main = do
 		. runGatewaySendableOutput
 		. runSomeRequestOutput
 		. runEventInput
+		. logDiscordEventInput
 		. reinterpretCommandInput
 		. reinterpretDiscordBot
 		. logDiscordBot

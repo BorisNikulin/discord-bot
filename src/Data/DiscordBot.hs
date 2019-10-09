@@ -52,6 +52,19 @@ logDiscordBot = intercept \case
 		sendMessage channel txt
 	UpdateBotStatus opts -> logMsg Info "Updating bot status" >> updateBotStatus opts
 
+logDiscordEventInput
+	:: Members
+		'[ CP.Log C.Message
+		,  Input D.Event
+		] r
+		=> Sem r a
+		-> Sem r a
+logDiscordEventInput = intercept \case
+	(Input :: Input D.Event r a) -> do
+		discordInput <- input
+		logMsg Debug $ "Discord event: " <> T.pack (show discordInput)
+		return discordInput
+
 reinterpretDiscordBot :: Sem (DiscordBot ': r) a -> Sem (Input BotCmd ': Output SomeRequest ': Output D.GatewaySendable ': r) a
 reinterpretDiscordBot = reinterpret3 \case
 	GetCommand -> input @BotCmd
