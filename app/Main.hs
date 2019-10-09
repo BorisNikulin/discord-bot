@@ -32,6 +32,7 @@ main = do
 		. runReader dis
 		. CP.runLogAction @IO C.richMessageAction
 		. runGatewaySendableOutput
+		. logGatewaySendableOutput
 		. runSomeRequestOutput
 		. logSomeRequestOutput
 		. runEventInput

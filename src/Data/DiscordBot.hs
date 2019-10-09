@@ -78,6 +78,18 @@ logSomeRequestOutput = intercept \case
 		logMsg Debug $ msg
 		output sr
 
+logGatewaySendableOutput
+	:: Members
+		'[ CP.Log C.Message
+		,  Output D.GatewaySendable
+		] r
+		=> Sem r a
+		-> Sem r a
+logGatewaySendableOutput = intercept \case
+	(Output gs :: Output D.GatewaySendable r a) -> do
+		logMsg Debug $ "Sending GatewaySendable: " <> T.pack (show gs)
+		output gs
+
 reinterpretDiscordBot :: Sem (DiscordBot ': r) a -> Sem (Input BotCmd ': Output SomeRequest ': Output D.GatewaySendable ': r) a
 reinterpretDiscordBot = reinterpret3 \case
 	GetCommand -> input @BotCmd
