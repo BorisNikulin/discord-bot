@@ -33,6 +33,7 @@ main = do
 		. CP.runLogAction @IO C.richMessageAction
 		. runGatewaySendableOutput
 		. runSomeRequestOutput
+		. logSomeRequestOutput
 		. runEventInput
 		. logDiscordEventInput
 		. reinterpretCommandInput

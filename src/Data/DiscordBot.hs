@@ -65,6 +65,19 @@ logDiscordEventInput = intercept \case
 		logMsg Debug $ "Discord event: " <> T.pack (show discordInput)
 		return discordInput
 
+logSomeRequestOutput
+	:: Members
+		'[ CP.Log C.Message
+		,  Output SomeRequest
+		] r
+		=> Sem r a
+		-> Sem r a
+logSomeRequestOutput = intercept \case
+	(Output sr@(SomeRequest _) :: Output SomeRequest r a) -> do
+		let msg = T.pack "Sending some request to discord"
+		logMsg Debug $ msg
+		output sr
+
 reinterpretDiscordBot :: Sem (DiscordBot ': r) a -> Sem (Input BotCmd ': Output SomeRequest ': Output D.GatewaySendable ': r) a
 reinterpretDiscordBot = reinterpret3 \case
 	GetCommand -> input @BotCmd
